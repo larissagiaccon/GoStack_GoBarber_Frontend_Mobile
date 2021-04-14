@@ -13,6 +13,10 @@ interface ProviderNameProps {
   selected: boolean;
 }
 
+interface HourContainerProps {
+  selected: boolean;
+}
+
 export const Container = styled.View`
   flex: 1;
 `;
