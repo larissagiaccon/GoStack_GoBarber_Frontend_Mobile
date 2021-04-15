@@ -32,10 +32,12 @@ import {
 } from './styles';
 import { useAuth } from '../../hooks/auth';
 
-interface SignUpFormData {
+interface ProfileFormData {
   name: string;
   email: string;
+  old_password: string;
   password: string;
+  password_confirmation: string;
 }
 
 const Profile: React.FC = () => {
@@ -45,54 +47,79 @@ const Profile: React.FC = () => {
   const newPasswordInputRef = useRef<TextInput>(null);
   const confirmPasswordInputRef = useRef<TextInput>(null);
 
-  const { user, signOut } = useAuth();
+  const { user, signOut, updateUser } = useAuth();
 
   const navigation = useNavigation();
 
-  const handleSignUp = useCallback(
-    async (data: SignUpFormData) => {
+  const handleSaveProfile = useCallback(async (data: ProfileFormData) => {
+    try {
+      formRef.current?.setErrors({});
+
+      const schema = Yup.object().shape({
+        name: Yup.string().required('Nome obrigatório'),
+        email: Yup.string()
+          .required('E-mail obrigatório')
+          .email('Digite um e-mail válido'),
+        old_password: Yup.string(),
+        password: Yup.string().when('old_password', {
+          is: val => !!val.length,
+          then: Yup.string().required('Campo obrigatório'),
+          otherwise: Yup.string(),
+        }),
+        password_confirmation: Yup.string()
+          .when('old_password', {
+            is: val => !!val.length,
+            then: Yup.string().required('Campo obrigatório'),
+            otherwise: Yup.string(),
+          })
+          .oneOf([Yup.ref('password'), null], 'Confirmação incorreta'),
+      });
+
+      await schema.validate(data, {
+        abortEarly: false,
+      });
+
       console.log(data);
 
-      try {
-        formRef.current?.setErrors({});
+      const {
+        name,
+        email,
+        old_password,
+        password,
+        password_confirmation,
+      } = data;
 
-        const schema = Yup.object().shape({
-          name: Yup.string().required('Nome obrigatório'),
-          email: Yup.string()
-            .email('Digite um e-mail válido')
-            .required('E-mail obrigatório'),
-          password: Yup.string().min(6, 'No mínimo 6 dígitos'),
-        });
+      const formData = {
+        name,
+        email,
+        ...(old_password
+          ? { old_password, password, password_confirmation }
+          : {}),
+      };
 
-        await schema.validate(data, {
-          abortEarly: false,
-        });
+      const response = await api.put('profile', formData);
 
-        await api.post('/users', data);
+      updateUser(response.data);
 
-        Alert.alert(
-          'Cadastro realizado com sucesso!',
-          'Você já pode fazer login na aplicação.',
-        );
+      Alert.alert(
+        'Perfil atualizado com sucesso!',
+        'As informações do perfil foram atualizadas.',
+      );
+    } catch (err) {
+      if (err instanceof Yup.ValidationError) {
+        const errors = getValidationErrors(err);
 
-        navigation.goBack();
-      } catch (err) {
-        if (err instanceof Yup.ValidationError) {
-          const errors = getValidationErrors(err);
+        formRef.current?.setErrors(errors);
 
-          formRef.current?.setErrors(errors);
-
-          return;
-        }
-
-        Alert.alert(
-          'Erro no cadastro',
-          'Ocorreu um erro ao fazer cadastro, tente novamente.',
-        );
+        return;
       }
-    },
-    [navigation],
-  );
+
+      Alert.alert(
+        'Erro na atualização do perfil',
+        'Ocorreu um erro atualizar seu perfil, tente novamente.',
+      );
+    }
+  }, []);
 
   return (
     <>
@@ -123,8 +150,9 @@ const Profile: React.FC = () => {
             </UserAvatarButton>
 
             <Form
+              initialData={user}
               ref={formRef}
-              onSubmit={handleSignUp}
+              onSubmit={handleSaveProfile}
               style={{ width: '100%' }}
             >
               <Input
