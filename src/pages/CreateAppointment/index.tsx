@@ -66,6 +66,7 @@ const CreateAppointment: React.FC = () => {
     return today;
   }, []);
 
+  const [nameProvider, setNameProvider] = useState<Provider>();
   const [availability, setAvailability] = useState<AvailabilityItem[]>([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(minimumDate);
@@ -94,6 +95,10 @@ const CreateAppointment: React.FC = () => {
         setAvailability(response.data);
         setSelectedHour(0);
       });
+
+    api.get(`/providers/${selectedProvider}`).then(response => {
+      setNameProvider(response.data);
+    });
   }, [selectedProvider, selectedDate]);
 
   const navigateBack = useCallback(() => {
@@ -152,12 +157,20 @@ const CreateAppointment: React.FC = () => {
         date,
       });
 
-      navigate('AppointmentCreated', { date: date.getTime() });
+      navigate('AppointmentCreated', {
+        date: date.getTime(),
+        providerName: nameProvider?.name,
+      });
     } catch (error) {
-      if (new Date() > date) {
+      if (!showDatePicker) {
         Alert.alert(
           'Erro ao realizar o agendamento',
-          'Ocorreu um erro ao tentar realizar um agendamento em um horário já passado, tente novamente outra data.',
+          'Ocorreu um erro ao tentar realizar um agendamento sem selecionar um horário, escolha um horário e tente novamente.',
+        );
+      } else if (new Date() > date) {
+        Alert.alert(
+          'Erro ao realizar o agendamento',
+          'Ocorreu um erro ao tentar realizar um agendamento em um horário já passado, tente novamente outro horário/data.',
         );
       } else {
         Alert.alert(
@@ -166,7 +179,14 @@ const CreateAppointment: React.FC = () => {
         );
       }
     }
-  }, [selectedDate, selectedHour, selectedProvider, navigate]);
+  }, [
+    selectedDate,
+    selectedHour,
+    selectedProvider,
+    nameProvider,
+    navigate,
+    showDatePicker,
+  ]);
 
   return (
     <Container>

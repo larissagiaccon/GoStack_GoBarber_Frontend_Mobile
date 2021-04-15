@@ -30,6 +30,7 @@ export interface Provider {
   name: string;
   avatar_url: string;
 }
+
 const Dashboard: React.FC = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const { signOut, user } = useAuth();
