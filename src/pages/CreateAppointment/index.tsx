@@ -14,6 +14,7 @@ import {
   Header,
   BackButton,
   HeaderTitle,
+  ProfileButton,
   UserAvatar,
   Content,
   ProvidersListContainer,
@@ -188,6 +189,10 @@ const CreateAppointment: React.FC = () => {
     showDatePicker,
   ]);
 
+  const navigateToProfile = useCallback(() => {
+    navigate('Profile');
+  }, [navigate]);
+
   return (
     <Container>
       <Header>
@@ -197,7 +202,9 @@ const CreateAppointment: React.FC = () => {
 
         <HeaderTitle>Cabeleireiros</HeaderTitle>
 
-        <UserAvatar source={{ uri: user.avatar_url }} />
+        <ProfileButton onPress={navigateToProfile}>
+          <UserAvatar source={{ uri: user.avatar_url }} />
+        </ProfileButton>
       </Header>
 
       <Content>

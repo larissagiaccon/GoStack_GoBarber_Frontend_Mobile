@@ -1,15 +1,16 @@
 import * as Yup from 'yup';
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   TextInput,
   Alert,
 } from 'react-native';
+
 import Icon from 'react-native-vector-icons/Feather';
 import { useNavigation } from '@react-navigation/native';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
 import { Form } from '@unform/mobile';
 import { FormHandles } from '@unform/core';
@@ -30,6 +31,7 @@ import {
   UserAvatarButton,
   UserAvatar,
 } from './styles';
+
 import { useAuth } from '../../hooks/auth';
 
 interface ProfileFormData {
@@ -51,74 +53,148 @@ const Profile: React.FC = () => {
 
   const navigation = useNavigation();
 
-  const handleSaveProfile = useCallback(async (data: ProfileFormData) => {
-    try {
-      formRef.current?.setErrors({});
+  const handleSaveProfile = useCallback(
+    async (data: ProfileFormData) => {
+      try {
+        formRef.current?.setErrors({});
 
-      const schema = Yup.object().shape({
-        name: Yup.string().required('Nome obrigatório'),
-        email: Yup.string()
-          .required('E-mail obrigatório')
-          .email('Digite um e-mail válido'),
-        old_password: Yup.string(),
-        password: Yup.string().when('old_password', {
-          is: val => !!val.length,
-          then: Yup.string().required('Campo obrigatório'),
-          otherwise: Yup.string(),
-        }),
-        password_confirmation: Yup.string()
-          .when('old_password', {
+        const schema = Yup.object().shape({
+          name: Yup.string().required('Nome obrigatório'),
+          email: Yup.string()
+            .required('E-mail obrigatório')
+            .email('Digite um e-mail válido'),
+          old_password: Yup.string(),
+          password: Yup.string().when('old_password', {
             is: val => !!val.length,
             then: Yup.string().required('Campo obrigatório'),
             otherwise: Yup.string(),
-          })
-          .oneOf([Yup.ref('password'), null], 'Confirmação incorreta'),
-      });
+          }),
+          password_confirmation: Yup.string()
+            .when('old_password', {
+              is: val => !!val.length,
+              then: Yup.string().required('Campo obrigatório'),
+              otherwise: Yup.string(),
+            })
+            .oneOf([Yup.ref('password'), null], 'Confirmação incorreta'),
+        });
 
-      await schema.validate(data, {
-        abortEarly: false,
-      });
+        await schema.validate(data, {
+          abortEarly: false,
+        });
 
-      console.log(data);
+        console.log(data);
 
-      const {
-        name,
-        email,
-        old_password,
-        password,
-        password_confirmation,
-      } = data;
+        const {
+          name,
+          email,
+          old_password,
+          password,
+          password_confirmation,
+        } = data;
 
-      const formData = {
-        name,
-        email,
-        ...(old_password
-          ? { old_password, password, password_confirmation }
-          : {}),
-      };
+        const formData = {
+          name,
+          email,
+          ...(old_password
+            ? { old_password, password, password_confirmation }
+            : {}),
+        };
 
-      const response = await api.put('profile', formData);
+        const response = await api.put('profile', formData);
 
-      updateUser(response.data);
+        updateUser(response.data);
 
-      Alert.alert(
-        'Perfil atualizado com sucesso!',
-        'As informações do perfil foram atualizadas.',
-      );
-    } catch (err) {
-      if (err instanceof Yup.ValidationError) {
-        const errors = getValidationErrors(err);
+        Alert.alert('Perfil atualizado com sucesso!');
 
-        formRef.current?.setErrors(errors);
+        navigation.goBack();
+      } catch (err) {
+        if (err instanceof Yup.ValidationError) {
+          const errors = getValidationErrors(err);
 
-        return;
+          formRef.current?.setErrors(errors);
+
+          return;
+        }
+
+        Alert.alert(
+          'Erro na atualização do perfil',
+          'Ocorreu um erro atualizar seu perfil, tente novamente.',
+        );
       }
+    },
+    [navigation, updateUser],
+  );
 
-      Alert.alert(
-        'Erro na atualização do perfil',
-        'Ocorreu um erro atualizar seu perfil, tente novamente.',
-      );
-    }
+  const handleUpdateAvatar = useCallback(() => {
+    // launchCamera(
+    //   {
+    //     mediaType: 'photo',
+    //     cameraType: 'front',
+    //   },
+    //   response => {
+    //     if (response.didCancel) {
+    //       return;
+    //     }
+
+    //     if (response.errorCode) {
+    //       Alert.alert('Erro ao atualizar seu avatar.');
+    //     }
+
+    //     const source = { uri: response.uri };
+
+    //     console.log('response', JSON.stringify(response));
+
+    //     const uriImage = {
+    //       filePath: response,
+    //       fileData: response.data,
+    //       fileUri: response.uri,
+    //     };
+    //   },
+    // );
+
+    launchImageLibrary(
+      {
+        mediaType: 'photo',
+      },
+      response => {
+        try {
+
+          if (response.didCancel) {
+            return;
+          }
+
+          if (response.errorCode) {
+            Alert.alert('Erro ao atualizar seu avatar.');
+          }
+
+          const source = { uri: response.uri };
+
+          console.log('response', JSON.stringify(response));
+
+          const data = new FormData();
+
+          data.append('avatar', {
+            type: 'image/jpg',
+            uri: response.uri,
+            name: `${user.id}.jpg`,
+          });
+
+          api.patch(`users/avatar`, data).then(response => updateUser(response.data));
+
+          Alert.alert('Sua imagem foi atualizada com sucesso');
+
+        } catch (error) {
+          Alert.alert(
+            'Erro na atualização do perfil',
+            'Ocorreu um erro atualizar seu perfil, tente novamente.',
+          );
+        }
+      },
+    );
+  }, [user.id, updateUser]);
+
+  const handleGoBack = useCallback(() => {
+    navigation.goBack();
   }, []);
 
   return (
@@ -134,7 +210,7 @@ const Profile: React.FC = () => {
         >
           <Container>
             <Header>
-              <BackToSignIn onPress={() => navigation.goBack()}>
+              <BackToSignIn onPress={handleGoBack}>
                 <Icon name="arrow-left" size={20} color="#999591" />
               </BackToSignIn>
 
@@ -145,7 +221,7 @@ const Profile: React.FC = () => {
               </LogOut>
             </Header>
 
-            <UserAvatarButton onPress={() => {}}>
+            <UserAvatarButton onPress={handleUpdateAvatar}>
               <UserAvatar source={{ uri: user.avatar_url }} />
             </UserAvatarButton>
 

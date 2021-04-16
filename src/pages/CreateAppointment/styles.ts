@@ -44,6 +44,7 @@ export const HeaderTitle = styled.Text`
   font-size: 20px;
   margin-left: 16px;
 `;
+export const ProfileButton = styled.TouchableOpacity``;
 
 export const UserAvatar = styled.Image`
   width: 56px;

@@ -23,14 +23,22 @@ export const HeaderTitle = styled.Text`
   font-size: 20px;
   font-family: 'RobotoSlab-Regular';
   line-height: 28px;
+  padding: 0 32px 32px 32px;
 `;
 
-export const BackToSignIn = styled.TouchableOpacity``;
+export const BackToSignIn = styled.TouchableOpacity`
+  padding: 0 64px 32px 0;
+`;
 
-export const LogOut = styled.TouchableOpacity``;
+export const LogOut = styled.TouchableOpacity`
+  padding: 0 0 32px 64px;
+`;
 
 export const UserAvatarButton = styled.TouchableOpacity`
-  margin: 26px 0 26px;
+  margin: 0 0 26px;
+  margin-left: 90px;
+  margin-right: 90px;
+  border-radius: 98px;
 `;
 
 export const UserAvatar = styled.Image`
